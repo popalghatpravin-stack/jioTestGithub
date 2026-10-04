@@ -21,7 +21,7 @@ public sealed class JioTvHomeTests : PageTest
         await homePage.OpenAsync(pageData.Url);
 
         homePage.CurrentUrl.Should().Contain(pageData.ExpectedHost);
-        (await homePage.IsPageDisplayedAsync()).Should().BeFalse("the JioTV page body should be visible");
+        (await homePage.IsPageDisplayedAsync()).Should().BeTrue("the JioTV page body should be visible");
         (await homePage.GetTitleAsync()).Should().NotBeNullOrWhiteSpace("the JioTV page should have a title");
     }
 }
