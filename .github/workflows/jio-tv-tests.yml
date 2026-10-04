@@ -26,17 +26,30 @@ on:
         required: false
         default: ''
         type: string
+      environment:
+        description: Test environment label used for report archives
+        required: true
+        default: dev
+        type: string
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    outputs:
+      report_environment: ${{ steps.report-environment.outputs.value }}
     env:
       DOTNET_VERSION: 8.x
       BUILD_CONFIGURATION: Release
       BROWSER: ${{ github.event.inputs.browser || 'chromium' }}
       TEST_FILTER: ${{ github.event.inputs.test_filter || '' }}
+      REPORT_ENVIRONMENT: ${{ github.event.inputs.environment || 'dev' }}
 
     steps:
+      - name: Set report environment
+        id: report-environment
+        shell: bash
+        run: echo "value=$REPORT_ENVIRONMENT" >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -93,7 +106,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jio-tv-allure-results
+          name: jio-tv-allure-results-${{ env.REPORT_ENVIRONMENT }}-${{ github.run_number }}
           path: bin/${{ env.BUILD_CONFIGURATION }}/net8.0/allure-results
           if-no-files-found: warn
 
@@ -110,7 +123,7 @@ jobs:
       - name: Download Allure results
         uses: actions/download-artifact@v4
         with:
-          name: jio-tv-allure-results
+          name: jio-tv-allure-results-${{ needs.test.outputs.report_environment }}-${{ github.run_number }}
           path: allure-results
 
       - name: Generate Allure report
@@ -118,6 +131,13 @@ jobs:
         with:
           allure_results: allure-results
           allure_report: allure-report
+
+      - name: Archive HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-${{ needs.test.outputs.report_environment }}-${{ github.run_number }}
+          path: allure-report
+          retention-days: 90
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
