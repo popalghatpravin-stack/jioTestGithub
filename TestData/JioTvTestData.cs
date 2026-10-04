@@ -1,3 +1,4 @@
+using JioTv.Playwright.Core.Config;
 using JioTv.Playwright.Models;
 using NUnit.Framework;
 
@@ -11,8 +12,8 @@ public static class JioTvTestData
         {
             var pageData = new JioTvPageData()
             {
-                Url = "https://www.jiotv.com/",
-                ExpectedHost = "jiotv.com"
+                Url = JioTvConfiguration.BaseUrl,
+                ExpectedHost = JioTvConfiguration.ExpectedHost
             };
 
             yield return new TestCaseData(pageData)
