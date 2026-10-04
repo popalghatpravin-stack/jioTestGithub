@@ -1,6 +1,9 @@
 name: Publish Allure Reports
 
 on:
+  workflow_run:
+    workflows: ["JioTV Tests"]
+    types: [completed]
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
