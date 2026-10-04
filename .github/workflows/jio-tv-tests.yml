@@ -1,0 +1,95 @@
+name: JioTV Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: Playwright browser to install
+        required: true
+        default: chromium
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+      test_filter:
+        description: Optional NUnit test filter
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_VERSION: 8.x
+      BUILD_CONFIGURATION: Release
+      BROWSER: ${{ github.event.inputs.browser || 'chromium' }}
+      TEST_FILTER: ${{ github.event.inputs.test_filter || '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore project
+        run: dotnet restore JioTv.Playwright.csproj
+
+      - name: Build project
+        run: dotnet build JioTv.Playwright.csproj --configuration "$BUILD_CONFIGURATION" --no-restore
+
+      - name: Install Playwright browser
+        shell: pwsh
+        run: |
+          $script = "bin/$env:BUILD_CONFIGURATION/net8.0/playwright.ps1"
+          if (-not (Test-Path $script)) {
+            throw "Playwright install script was not generated at $script."
+          }
+
+          & $script install --with-deps $env:BROWSER
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Run JioTV tests
+        shell: bash
+        run: |
+          args=(
+            --configuration "$BUILD_CONFIGURATION"
+            --no-build
+            --settings playwright.runsettings
+            --logger "trx;LogFileName=jio-tv-tests.trx"
+            --results-directory TestResults
+          )
+
+          if [[ -n "$TEST_FILTER" ]]; then
+            args+=(--filter "$TEST_FILTER")
+          fi
+
+          dotnet test JioTv.Playwright.csproj "${args[@]}"
+
+      - name: Upload TRX test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jio-tv-test-results
+          path: TestResults/*.trx
+          if-no-files-found: warn
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jio-tv-allure-results
+          path: bin/${{ env.BUILD_CONFIGURATION }}/net8.0/allure-results
+          if-no-files-found: warn
