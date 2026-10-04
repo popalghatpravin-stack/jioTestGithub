@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using JioTv.Playwright.Core.Config;
 
 namespace JioTv.Playwright.Pages;
 
@@ -17,7 +18,7 @@ public sealed class JioTvHomePage
         await _page.GotoAsync(url, new PageGotoOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
+            Timeout = JioTvConfiguration.TimeoutMilliseconds
         });
     }
 
@@ -26,7 +27,7 @@ public sealed class JioTvHomePage
         await _page.GoBackAsync(new PageGoBackOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
+            Timeout = JioTvConfiguration.TimeoutMilliseconds
         });
     }
 
@@ -35,7 +36,7 @@ public sealed class JioTvHomePage
         await _page.GoForwardAsync(new PageGoForwardOptions
         {
             WaitUntil = WaitUntilState.DOMContentLoaded,
-            Timeout = 60000
+            Timeout = JioTvConfiguration.TimeoutMilliseconds
         });
     }
 
