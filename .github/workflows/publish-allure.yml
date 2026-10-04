@@ -54,7 +54,7 @@ jobs:
             artifact_id="${artifact%%$'\t'*}"
             selected="${run_id}"$'\t'"${run_number}"$'\t'"${environment}"$'\t'"${artifact_id}"
             break
-          done < <(jq -r '.workflow_runs | sort_by(.run_number)[] | select(.conclusion != "cancelled") | [.id, .run_number] | @tsv' <<< "$runs_json")
+          done < <(jq -r '.workflow_runs | sort_by(.run_number) | reverse[] | select(.conclusion != "cancelled") | [.id, .run_number] | @tsv' <<< "$runs_json")
 
           if [ -z "$selected" ]; then
             echo 'No unpublished Allure runs found.'
