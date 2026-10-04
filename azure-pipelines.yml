@@ -101,9 +101,9 @@ steps:
       artifact: jio-tv-allure-results
       publishLocation: pipeline
 
-  - task: PublishAllureReport@1
+  - task: PublishAllureReport@2
     displayName: Publish Allure report tab
     condition: always()
     inputs:
-      allureVersion: 2.27.0
+      allureVersion: 2.36.0
       testResultsDir: $(Build.SourcesDirectory)/allure-results
