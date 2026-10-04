@@ -1,0 +1,10 @@
+[Bb]in/
+[Oo]bj/
+[Aa]rtifacts/
+.vs/
+.vscode/*.log
+allure-report/
+allure-results*/
+TestResults/
+*.user
+*.suo
