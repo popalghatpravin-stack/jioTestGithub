@@ -1,0 +1,7 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","954","HomePageHasNonEmptyTitleAsync","JioTv.Playwright","2026-10-04","passed","2026-10-04","JioTvHomeTests","JioTv.Playwright.Tests","JioTvHomeTests","HomePageHasNonEmptyTitleAsync"
+"","332","HomePageLoadsAsync","JioTv.Playwright","2026-10-04","passed","2026-10-04","JioTvHomeTests","JioTv.Playwright.Tests","JioTvHomeTests","HomePageLoadsAsync"
+"","3862","BrowserBackAndForwardNavigationAsync","JioTv.Playwright","2026-10-04","passed","2026-10-04","JioTvHomeTests","JioTv.Playwright.Tests","JioTvHomeTests","BrowserBackAndForwardNavigationAsync"
+"","1216","HomePageRemainsAvailableAfterRefreshAsync","JioTv.Playwright","2026-10-04","passed","2026-10-04","JioTvHomeTests","JioTv.Playwright.Tests","JioTvHomeTests","HomePageRemainsAvailableAfterRefreshAsync"
+"","332","HomePageLoadsWithinSixtySecondsAsync","JioTv.Playwright","2026-10-04","passed","2026-10-04","JioTvHomeTests","JioTv.Playwright.Tests","JioTvHomeTests","HomePageLoadsWithinSixtySecondsAsync"
+"","307","HomePageUsesHttpsAsync","JioTv.Playwright","2026-10-04","passed","2026-10-04","JioTvHomeTests","JioTv.Playwright.Tests","JioTvHomeTests","HomePageUsesHttpsAsync"
