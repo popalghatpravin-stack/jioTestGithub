@@ -100,3 +100,10 @@ steps:
       targetPath: $(Build.SourcesDirectory)/allure-results
       artifact: jio-tv-allure-results
       publishLocation: pipeline
+
+  - task: PublishAllureReport@1
+    displayName: Publish Allure report tab
+    condition: always()
+    inputs:
+      allureVersion: 2.27.0
+      testResultsDir: $(Build.SourcesDirectory)/allure-results
