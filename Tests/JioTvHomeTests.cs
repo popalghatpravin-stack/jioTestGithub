@@ -35,9 +35,7 @@ public sealed class JioTvHomeTests : PageTest
     public async Task DirectUrlNavigationOpensHomePageAsync()
     {
         var homePage = new JioTvHomePage(Page);
-
         await homePage.OpenAsync(JioTvConfiguration.BaseUrl);
-
         homePage.CurrentUrl.Should().Contain(JioTvConfiguration.ExpectedHost);
         (await homePage.IsPageDisplayedAsync()).Should().BeTrue("the JioTV page body should be visible");
         (await homePage.GetTitleAsync()).Should().NotBeNullOrWhiteSpace("the JioTV page should have a title");
