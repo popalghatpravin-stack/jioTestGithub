@@ -1,7 +1,7 @@
 name: JioTV Tests
 
 permissions:
-  contents: read
+  contents: write
 
 on:
   push:
@@ -114,12 +114,11 @@ jobs:
     if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download Allure results
         uses: actions/download-artifact@v4
         with:
@@ -139,26 +138,48 @@ jobs:
           path: allure-report
           retention-days: 90
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+      - name: Build report archive site
+        shell: bash
+        env:
+          REPORT_ENVIRONMENT: ${{ needs.test.outputs.report_environment }}
+        run: |
+          set -euo pipefail
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+          mkdir -p site
+          if git fetch origin gh-pages:gh-pages; then
+            git archive gh-pages | tar -x -C site
+          fi
+
+          report_path="site/reports/$REPORT_ENVIRONMENT/$GITHUB_RUN_NUMBER"
+          latest_path="site/latest/$REPORT_ENVIRONMENT"
+          mkdir -p "$report_path" "$latest_path"
+          cp -R allure-report/. "$report_path/"
+          rm -rf "$latest_path"
+          mkdir -p "$latest_path"
+          cp -R allure-report/. "$latest_path/"
+
+          {
+            echo '<!doctype html>'
+            echo '<html lang="en"><head><meta charset="utf-8"><title>JioTV Allure Reports</title></head><body>'
+            echo '<h1>JioTV Allure Reports</h1><p>Latest reports by environment:</p><ul>'
+            for environment_path in site/latest/*; do
+              [ -d "$environment_path" ] || continue
+              environment="${environment_path##*/}"
+              printf '<li><a href="latest/%s/">%s latest</a></li>\n' "$environment" "$environment"
+            done
+            echo '</ul><h2>Archived runs</h2><ul>'
+            for report_path in site/reports/*/*; do
+              [ -d "$report_path" ] || continue
+              environment="$(basename "$(dirname "$report_path")")"
+              run_number="$(basename "$report_path")"
+              printf '<li><a href="reports/%s/%s/">%s run %s</a></li>\n' "$environment" "$run_number" "$environment" "$run_number"
+            done
+            echo '</ul></body></html>'
+          } > site/index.html
+
+      - name: Publish report archive to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: allure-report
-
-  deploy-pages:
-    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: publish-allure
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy Allure report to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: site
