@@ -31,6 +31,18 @@ public sealed class JioTvHomeTests : PageTest
     }
 
     [Test]
+    [AllureLink("https://dev.azure.com/popalghatpravin/demo/_workitems/edit/12")]
+    public async Task DirectUrlNavigationOpensHomePageAsync()
+    {
+        var homePage = new JioTvHomePage(Page);
+        // Navigate directly to the JioTV home page URL.
+        await homePage.OpenAsync(JioTvConfiguration.BaseUrl);
+        homePage.CurrentUrl.Should().Contain(JioTvConfiguration.ExpectedHost);
+        (await homePage.IsPageDisplayedAsync()).Should().BeTrue("the JioTV page body should be visible");
+        (await homePage.GetTitleAsync()).Should().NotBeNullOrWhiteSpace("the JioTV page should have a title");
+    }
+
+    [Test]
     [AllureLink("https://dev.azure.com/popalghatpravin/demo/_workitems/edit/7")]
     public async Task HomePageHasNonEmptyTitleAsync()
     {
