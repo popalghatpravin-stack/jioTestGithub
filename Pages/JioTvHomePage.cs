@@ -21,6 +21,24 @@ public sealed class JioTvHomePage
         });
     }
 
+    public async Task GoBackAsync()
+    {
+        await _page.GoBackAsync(new PageGoBackOptions
+        {
+            WaitUntil = WaitUntilState.DOMContentLoaded,
+            Timeout = 60000
+        });
+    }
+
+    public async Task GoForwardAsync()
+    {
+        await _page.GoForwardAsync(new PageGoForwardOptions
+        {
+            WaitUntil = WaitUntilState.DOMContentLoaded,
+            Timeout = 60000
+        });
+    }
+
     public Task<string> GetTitleAsync() => _page.TitleAsync();
 
     public Task<bool> IsPageDisplayedAsync() => PageBody.IsVisibleAsync();

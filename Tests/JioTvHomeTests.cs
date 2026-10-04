@@ -83,4 +83,29 @@ public sealed class JioTvHomeTests : PageTest
         stopwatch.Elapsed.Should().BeLessThanOrEqualTo(TimeSpan.FromSeconds(60));
         (await homePage.IsPageDisplayedAsync()).Should().BeTrue("the JioTV page body should be visible");
     }
+
+    [Test]
+    [AllureLink("https://dev.azure.com/popalghatpravin/demo/_workitems/edit/11")]
+    public async Task BrowserBackAndForwardNavigationAsync()
+    {
+        var homePage = new JioTvHomePage(Page);
+        var firstUrl = JioTvConfiguration.BaseUrl;
+        var secondUrl = $"{JioTvConfiguration.BaseUrl}?navigation-test=second";
+
+        await homePage.OpenAsync(firstUrl);
+        await homePage.OpenAsync(secondUrl);
+
+        homePage.CurrentUrl.Should().Contain("navigation-test=second");
+        (await homePage.IsPageDisplayedAsync()).Should().BeTrue("the second JioTV page should be visible");
+
+        await homePage.GoBackAsync();
+
+        homePage.CurrentUrl.Should().Be(firstUrl);
+        (await homePage.IsPageDisplayedAsync()).Should().BeTrue("the previous JioTV page should be visible");
+
+        await homePage.GoForwardAsync();
+
+        homePage.CurrentUrl.Should().Contain("navigation-test=second");
+        (await homePage.IsPageDisplayedAsync()).Should().BeTrue("the second JioTV page should be visible again");
+    }
 }
