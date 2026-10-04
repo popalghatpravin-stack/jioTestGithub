@@ -89,8 +89,14 @@ steps:
       failTaskOnFailedTests: false
 
   - pwsh: |
-      New-Item -ItemType Directory -Path "$(Build.SourcesDirectory)/allure-results" -Force | Out-Null
-    displayName: Prepare Allure results
+      $source = "$(Build.SourcesDirectory)/bin/$(buildConfiguration)/net8.0/allure-results"
+      $target = "$(Build.SourcesDirectory)/allure-results"
+
+      New-Item -ItemType Directory -Path $target -Force | Out-Null
+      if (Test-Path $source) {
+        Copy-Item -Path "$source/*" -Destination $target -Recurse -Force
+      }
+    displayName: Collect Allure results
     condition: always()
 
   - task: PublishPipelineArtifact@1
