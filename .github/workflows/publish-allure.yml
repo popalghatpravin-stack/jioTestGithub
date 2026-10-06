@@ -127,6 +127,38 @@ jobs:
           } > site/index.html
           rm -f "$rows_file"
 
+          manifest_rows="$(mktemp)"
+          for report_path in site/reports/*/*; do
+            [ -d "$report_path" ] || continue
+            summary_path="$report_path/widgets/summary.json"
+            [ -f "$summary_path" ] || continue
+            environment="$(basename "$(dirname "$report_path")")"
+            run_number="$(basename "$report_path")"
+            [[ "$run_number" =~ ^[0-9]+$ ]] || continue
+            passed="$(jq -r '.statistic.passed // 0' "$summary_path")"
+            failed="$(jq -r '(.statistic.failed // 0) + (.statistic.broken // 0)' "$summary_path")"
+            total="$(jq -r '.statistic.total // 0' "$summary_path")"
+            jq -cn \
+              --argjson run_number "$run_number" \
+              --arg environment "$environment" \
+              --arg report_path "reports/${environment}/${run_number}/" \
+              --argjson passed "$passed" \
+              --argjson failed "$failed" \
+              --argjson total "$total" \
+              '{run_number:$run_number,environment:$environment,report_path:$report_path,passed:$passed,failed:$failed,total:$total}' \
+              >> "$manifest_rows"
+          done
+
+          manifest_tmp="$(mktemp)"
+          jq -s 'sort_by(.run_number) | reverse' "$manifest_rows" > "$manifest_tmp"
+          rm -f "$manifest_rows"
+          if [ ! -f site/reports-index.json ] || ! cmp -s "$manifest_tmp" site/reports-index.json; then
+            mv "$manifest_tmp" site/reports-index.json
+            processed=$((processed + 1))
+          else
+            rm -f "$manifest_tmp"
+          fi
+
           echo "processed=$processed" >> "$GITHUB_OUTPUT"
 
       - name: Publish report archive to GitHub Pages
