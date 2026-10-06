@@ -43,17 +43,34 @@ jobs:
           runs_json="$(gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/workflows/jio-tv-tests.yml/runs?branch=main&status=completed&per_page=100")"
           processed=0
 
-          while IFS=$'\t' read -r run_id run_number; do
+          while IFS=$'\t' read -r run_id run_number created_at run_url; do
             artifacts_json="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100")"
             artifact="$(jq -r '.artifacts[] | select(.expired == false and (.name | startswith("jio-tv-allure-results-"))) | [.id, .name] | @tsv' <<< "$artifacts_json" | head -n 1)"
-            [ -n "$artifact" ] || continue
+            if [ -z "$artifact" ]; then
+              for report_path in site/reports/*/"${run_number}"; do
+                [ -d "$report_path" ] || continue
+                if [ ! -f "$report_path/run.json" ]; then
+                  jq -n --arg date "$created_at" --arg url "$run_url" --arg run "$run_number" \
+                    '{date:$date,url:$url,run:$run}' > "$report_path/run.json"
+                  processed=$((processed + 1))
+                fi
+              done
+              continue
+            fi
 
             artifact_id="${artifact%%$'\t'*}"
             artifact_name="${artifact#*$'\t'}"
             environment_and_run="${artifact_name#jio-tv-allure-results-}"
             environment="${environment_and_run%-${run_number}}"
             report_path="site/reports/${environment}/${run_number}"
-            [ -d "$report_path" ] && continue
+            if [ -d "$report_path" ]; then
+              if [ ! -f "$report_path/run.json" ]; then
+                jq -n --arg date "$created_at" --arg url "$run_url" --arg run "$run_number" \
+                  '{date:$date,url:$url,run:$run}' > "$report_path/run.json"
+                processed=$((processed + 1))
+              fi
+              continue
+            fi
 
             working_dir="$(mktemp -d)"
             trap 'rm -rf "$working_dir"' EXIT
@@ -62,6 +79,8 @@ jobs:
             unzip -q "$working_dir/results.zip" -d "$working_dir/results"
             mkdir -p "$report_path"
             allure generate "$working_dir/results" --clean --output "$report_path"
+            jq -n --arg date "$created_at" --arg url "$run_url" --arg run "$run_number" \
+              '{date:$date,url:$url,run:$run}' > "$report_path/run.json"
 
             latest_path="site/latest/${environment}"
             rm -rf "$latest_path"
@@ -70,26 +89,43 @@ jobs:
             processed=$((processed + 1))
             rm -rf "$working_dir"
             trap - EXIT
-          done < <(jq -r '.workflow_runs | sort_by(.run_number)[] | select(.conclusion != "cancelled") | [.id, .run_number] | @tsv' <<< "$runs_json")
+          done < <(jq -r '.workflow_runs | sort_by(.run_number)[] | select(.conclusion != "cancelled") | [.id, .run_number, .created_at, .html_url] | @tsv' <<< "$runs_json")
 
+          rows_file="$(mktemp)"
           {
             echo '<!doctype html>'
-            echo '<html lang="en"><head><meta charset="utf-8"><title>JioTV Allure Reports</title></head><body>'
-            echo '<h1>JioTV Allure Reports</h1><p>Latest reports by environment:</p><ul>'
-            for environment_path in site/latest/*; do
-              [ -d "$environment_path" ] || continue
-              environment="${environment_path##*/}"
-              printf '<li><a href="latest/%s/">%s latest</a></li>\n' "$environment" "$environment"
-            done
-            echo '</ul><h2>Archived runs</h2><ul>'
+            echo '<meta name="viewport" content="width=device-width,initial-scale=1"><title>JioTV Test Reports</title>'
+            echo '<style>body{font:15px system-ui,sans-serif;margin:2rem auto;padding:0 1rem;max-width:1100px;color:#20252b}h1{margin-bottom:.3rem}p{color:#5b6570}table{width:100%;border-collapse:collapse;margin-top:1.5rem}th,td{padding:.75rem;text-align:left;border-bottom:1px solid #d9dee3}th{background:#f3f5f6}td a{font-weight:600}.passed{color:#167341}.failed{color:#b42318}.skipped{color:#596579}</style></head><body>'
+            echo '<h1>JioTV Test Reports</h1><p>Execution history and Allure summaries</p>'
+            echo '<table><thead><tr><th>Date</th><th>Environment</th><th>Run</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Pipeline</th></tr></thead><tbody>'
             for report_path in site/reports/*/*; do
               [ -d "$report_path" ] || continue
+              [ -f "$report_path/widgets/summary.json" ] || continue
               environment="$(basename "$(dirname "$report_path")")"
               run_number="$(basename "$report_path")"
-              printf '<li><a href="reports/%s/%s/">%s run %s</a></li>\n' "$environment" "$run_number" "$environment" "$run_number"
+              summary_path="$report_path/widgets/summary.json"
+              metadata_path="$report_path/run.json"
+              passed="$(jq -r '.statistic.passed // 0' "$summary_path")"
+              failed="$(jq -r '(.statistic.failed // 0) + (.statistic.broken // 0)' "$summary_path")"
+              skipped="$(jq -r '.statistic.skipped // 0' "$summary_path")"
+              date_raw='0000'
+              date='Unknown'
+              pipeline_url='#'
+              if [ -f "$metadata_path" ]; then
+                date_raw="$(jq -r '.date // "0000"' "$metadata_path")"
+                date="$(sed 's/T/ /; s/Z UTC/' <<< "$date_raw")"
+                pipeline_url="$(jq -r '.url // "#"' "$metadata_path")"
+              fi
+              printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+                "$date_raw" "$date" "$environment" "$run_number" "$passed" "$failed" "$skipped" "$pipeline_url" >> "$rows_file"
             done
-            echo '</ul></body></html>'
+            sort -r -t $'\t' -k1,1 "$rows_file" | while IFS=$'\t' read -r _ date environment run_number passed failed skipped pipeline_url; do
+              printf '<tr><td>%s</td><td>%s</td><td><a href="reports/%s/%s/">Run %s</a></td><td class="passed">%s</td><td class="failed">%s</td><td class="skipped">%s</td><td><a href="%s">View run</a></td></tr>\n' \
+                "$date" "$environment" "$environment" "$run_number" "$run_number" "$passed" "$failed" "$skipped" "$pipeline_url"
+            done
+            echo '</tbody></table></body></html>'
           } > site/index.html
+          rm -f "$rows_file"
 
           echo "processed=$processed" >> "$GITHUB_OUTPUT"
 
