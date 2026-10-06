@@ -113,7 +113,7 @@ jobs:
               pipeline_url='#'
               if [ -f "$metadata_path" ]; then
                 date_raw="$(jq -r '.date // "0000"' "$metadata_path")"
-                date="$(sed 's/T/ /; s/Z UTC/' <<< "$date_raw")"
+                date="$(sed 's/T/ /; s/Z$/ UTC/' <<< "$date_raw")"
                 pipeline_url="$(jq -r '.url // "#"' "$metadata_path")"
               fi
               printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
